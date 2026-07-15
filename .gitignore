@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Training / experiment outputs
+logs/
+outputs/
+*.log
+
+# Large binaries (paper PDF, checkpoints, weights)
+*.pdf
+*.ckpt
+*.safetensors
+*.pth
+*.pt
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Vendored third-party VCS metadata
+dreamgaussian/.git.upstream/
+
+# local source of docs/assets/pipeline.png (kept out of the repo)
+/Hallo3D.png

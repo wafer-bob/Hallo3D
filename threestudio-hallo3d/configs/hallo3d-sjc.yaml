@@ -1,0 +1,105 @@
+name: "hallo3d-sjc"
+tag: "${rmspace:${system.prompt_processor.prompt},_}"
+exp_root_dir: outputs
+seed: 0
+
+data_type: random-camera-datamodule
+data:
+  batch_size: 4 # multi-view appearance alignment operates on 4 views
+  camera_distance_range: [1.50, 1.50]
+  elevation_range: [-10, 45]
+  camera_perturb: 0.0
+  center_perturb: 0.0
+  up_perturb: 0.0
+  light_position_perturb: 0.0
+  eval_elevation_deg: 20.0
+
+system_type: sjc-system
+system:
+  geometry_type: volume-grid
+  geometry:
+    normal_type: null
+    grid_size: [100, 100, 100]
+    density_bias: -1.0
+    n_feature_dims: 4
+
+  material_type: no-material
+  material:
+    n_output_dims: 4
+    color_activation: none
+
+  background_type: textured-background
+  background:
+    n_output_dims: 4
+    color_activation: none
+    height: 4
+    width: 4
+
+  renderer_type: nerf-volume-renderer
+  renderer:
+    num_samples_per_ray: 512
+    grid_prune: false
+
+  prompt_processor_type: stable-diffusion-prompt-processor
+  prompt_processor:
+    pretrained_model_name_or_path: "stabilityai/stable-diffusion-2-1-base"
+    prompt: ???
+    view_dependent_prompt_front: true
+
+  guidance_type: "hallo3d-sd-guidance"
+  guidance:
+    pretrained_model_name_or_path: "stabilityai/stable-diffusion-2-1-base"
+    guidance_scale: 100.
+    use_sjc: true
+    var_red: true
+    min_step_percent: 0.01
+    max_step_percent: 0.97
+    # --- Hallo3D ---
+    enable_appearance_alignment: true
+    align_mode: extend # volume grid trained from scratch (docs/DIAGNOSIS.md)
+    focal_fovy_threshold_deg: 48.0
+    enable_hallucination_detection: true
+    lmm_server_url: "http://127.0.0.1:39122"
+    enable_cg_loss: true
+    cg_start_step: 2200
+    cg_interval: 4
+    cg_ddim_steps: 20
+    cg_guidance_scale: 7.5
+    general_negative_prompt: "unnatural colors, poor lighting, low quality, artifacts, smooth texture"
+
+  loggers:
+    wandb:
+      enable: false
+      project: "threestudio"
+      name: None
+
+  loss:
+    lambda_sds: 1.
+    lambda_cg: 0.1 # w in Eq. 8 (Sec. 4.5)
+    center_ratio: 0.78125 # = 50 / 64
+    lambda_depth: 0
+    lambda_emptiness: [5000, 1.e+4, 2.e+5, 5001] # identical to the baseline defaults
+    emptiness_scale: 10
+
+  optimizer:
+    name: Adamax
+    args:
+      lr: 0.05
+    params:
+      geometry:
+        lr: 0.05
+      background:
+        lr: 0.0001
+
+trainer:
+  max_steps: 2500 # 10000 / 4 with batch_size 4 (Appendix B)
+  log_every_n_steps: 1
+  num_sanity_val_steps: 0
+  val_check_interval: 200
+  enable_progress_bar: true
+  precision: 16-mixed
+
+checkpoint:
+  save_last: true
+  save_top_k: -1
+  every_n_train_steps: ${trainer.max_steps}
